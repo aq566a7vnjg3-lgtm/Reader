@@ -127,9 +127,127 @@ body {
 .empty { color: #aaa; font-weight: 400; }
 .actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 canvas { display: none; }
+.a4 {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 8mm auto 16mm;
+  background: #fff;
+  padding: 7mm 8mm;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+  font-family: 'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
+  font-size: 10px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+.a4h {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 3px solid #ec6c00;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+}
+.a4h-title { font-size: 26px; font-weight: 900; color: #ec6c00; letter-spacing: 4px; line-height: 1; }
+.a4h-sub { font-size: 8.5px; color: #555; margin-top: 4px; line-height: 1.65; }
+.a4h-date {
+  border: 2px solid #ec6c00;
+  border-radius: 4px;
+  padding: 5px 10px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.a4h-date .dl { font-size: 8px; color: #777; margin-bottom: 2px; }
+.a4h-date .dv { font-size: 11px; font-weight: 700; color: #ec6c00; white-space: nowrap; }
+.a4-cust {
+  background: #fff3ea;
+  border: 1.5px solid #ec6c00;
+  border-radius: 5px;
+  padding: 5px 8px;
+  margin-bottom: 5px;
+}
+.a4-cust-hd {
+  font-size: 9px; font-weight: 700; color: #ec6c00;
+  border-bottom: 1px solid #f5cba7;
+  padding-bottom: 2px; margin-bottom: 4px;
+}
+.a4-cust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px 14px;
+}
+.a4-crow { display: flex; gap: 4px; align-items: baseline; }
+.a4-cl { font-size: 8px; color: #666; flex-shrink: 0; white-space: nowrap; }
+.a4-cv {
+  font-weight: 700; font-size: 9.5px;
+  border-bottom: 1px solid #aab;
+  flex: 1; min-width: 0; padding-bottom: 1px;
+  overflow-wrap: anywhere;
+}
+.a4-qgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.a4-qbox { border: 1.5px solid #ec6c00; border-radius: 4px; overflow: hidden; }
+.a4-qbox.span3 { grid-column: 1 / -1; }
+.a4-qhd {
+  background: #ec6c00; color: #fff;
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 7px;
+  font-size: 8.5px; font-weight: 700;
+}
+.a4-qnum {
+  background: #fff; color: #ec6c00;
+  font-size: 7.5px; font-weight: 900;
+  width: 14px; height: 14px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.a4-qbody { padding: 4px 7px; font-size: 9px; min-height: 26px; line-height: 1.7; overflow-wrap: anywhere; }
+.a4-ans { color: #ec6c00; font-weight: 700; }
+.a4-none { color: #bbb; font-style: italic; }
+.a4-carinfo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px 8px;
+  font-size: 9px;
+}
+.a4-carinfo span { display: flex; gap: 3px; }
+.a4-carinfo .cl { color: #777; font-size: 8px; flex-shrink: 0; }
+.a4-staff {
+  border: 1.5px dashed #bbb;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-bottom: 4px;
+}
+.a4-staff-hd { font-size: 8px; color: #999; font-weight: 700; margin-bottom: 3px; }
+.a4-staff-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px 12px;
+  font-size: 9px; color: #555;
+}
+.a4-srow { display: flex; align-items: center; gap: 4px; }
+.a4-srow.full { grid-column: 1/-1; }
+.a4-si {
+  flex: 1; border: none; border-bottom: 1px solid #ccc;
+  background: transparent; font-size: 9px; font-family: inherit; outline: none;
+}
+.a4-priv {
+  background: #f5f5f5; border: 1px solid #ccc; border-radius: 3px;
+  padding: 4px 7px; display: flex; gap: 6px; align-items: flex-start;
+}
+.a4-priv-lbl {
+  background: #ec6c00; color: #fff; font-size: 7px;
+  padding: 1px 4px; border-radius: 2px; flex-shrink: 0; font-weight: 700;
+}
+.a4-priv-txt { font-size: 6.5px; color: #666; line-height: 1.65; }
 @media (max-width: 620px) {
   .grid { grid-template-columns: 1fr; }
   .a4h { flex-direction: column; }
+  .a4 { width: 100%; min-height: auto; margin: 0; box-shadow: none; }
+  .a4-qgrid, .a4-cust-grid, .a4-carinfo, .a4-staff-grid { grid-template-columns: 1fr; }
 }
 @media print {
   body { background: #fff; }
@@ -196,9 +314,9 @@ const DEFAULT_D = {
 const TRANSFER_SECRET = 'HondaCars-NaraChuo-MinamiKyoto-Questionnaire-QR-2026';
 const TRANSFER_SALT = 'HondaCarsQuestionnaireQRv2';
 const TRANSFER_FIELDS = [
-  '_date','cf','cn','cb_y','cb_m','cb_d','ct1','ct2','ce','cfam',
-  'q5_1','q5_2','q7_other','q9_amt','q10_amt','q11_co',
-  'q12_car','q12_yr','q12_km'
+  '_date','cf','cn','cb_y','cb_m','cb_d','ct1','ct2','ce','cz','ca','cj','cfam',
+  'q2o','q3o','q5_1','q5_2','q5_3','q5_4','q5_note','q7_other','q9_amt','q10_amt','q11_co',
+  'q12_car','q12_yr','q12_km','q12_sh_y','q12_sh_m','q12_buy','q12_shop'
 ];
 const TRANSFER_OPTION_KEYS = ['q1','q2','q3','q4','q4ev_charge','q6','q7','q8','q9','q10','q11_sel'];
 const TRANSFER_OPTIONS = {
@@ -349,48 +467,98 @@ async function decodeTransferData(raw){
   throw new Error('対応していないQRデータです。');
 }
 
+function ans(val){
+  if(!val || (Array.isArray(val)&&!val.length))
+    return '<span class="a4-none">—</span>';
+  if(Array.isArray(val)) return val.map(v=>`<span class="a4-ans">${html(v)}</span>`).join('、');
+  return `<span class="a4-ans">${html(val)}</span>`;
+}
+
+function qbox(num, title, content, span3){
+  return `<div class="a4-qbox${span3?' span3':''}">
+    <div class="a4-qhd"><div class="a4-qnum">${num}</div>${html(title)}</div>
+    <div class="a4-qbody">${content}</div>
+  </div>`;
+}
+
 function renderAnswer(d){
-  const birth = d.cb_y && d.cb_m && d.cb_d ? `${d.cb_y}年${d.cb_m}月${d.cb_d}日` : d.cb_y;
-  const shaken = d.q12_sh_y ? `${d.q12_sh_y}${d.q12_sh_m ? ' ' + d.q12_sh_m + '月' : ''}` : (d.q12_sh_m ? d.q12_sh_m + '月' : '');
-  const q5 = [d.q5_1,d.q5_2,d.q5_3,d.q5_4].filter(Boolean).join('、');
+  const q4ev = d.q4.some(i=>['N-VAN e:','N-ONE e:','Super-ONE'].includes(i))&&d.q4ev_charge
+    ? `<br><span style="font-size:8px;color:#777;">充電設備：${html(d.q4ev_charge)}</span>` : '';
+  const q5list = [d.q5_1,d.q5_2,d.q5_3,d.q5_4].filter(Boolean);
+  const carRows = [
+    ['車名',d.q12_car],['年式',d.q12_yr],['走行距離',d.q12_km],
+    ['次回車検',d.q12_sh_y?(d.q12_sh_y+(d.q12_sh_m?` ${d.q12_sh_m}月`:'')):d.q12_sh_m?`${d.q12_sh_m}月`:''],
+    ['購入先',d.q12_buy],['メンテ店',d.q12_shop]
+  ].filter(([,v])=>v);
+
   document.getElementById('a4').innerHTML = `
     <div class="a4h">
       <div>
         <div class="a4h-title">ご来店アンケート</div>
-        <div>QR読み取りデータ</div>
+        <div class="a4h-sub">Honda Cars 奈良中央・南京都　ご来店いただきありがとうございます。</div>
       </div>
-      <div class="date">${html(d._date || '')}</div>
+      <div class="a4h-date"><div class="dl">ご記入日</div><div class="dv">${html(d._date || '')}</div></div>
     </div>
-    ${section('お客様情報', [
-      ['フリガナ', d.cf], ['お名前', d.cn], ['携帯電話', d.ct1], ['ご自宅電話', d.ct2],
-      ['生年月日', birth], ['メール', d.ce], ['郵便番号', d.cz], ['ご住所', d.ca, true],
-      ['ご職業', d.cj], ['ご家族人数', d.cfam]
-    ])}
-    ${section('アンケート回答', [
-      ['ご来店のきっかけ', d.q1],
-      ['Honda Carsを知ったきっかけ', d.q2],
-      ['きっかけ その他', d.q2o],
-      ['本日のご来店目的', d.q3],
-      ['目的 その他', d.q3o],
-      ['興味のある車種', d.q4, true],
-      ['充電設備', d.q4ev_charge],
-      ['他メーカー希望車種', q5, true],
-      ['他メーカー 備考', d.q5_note, true],
-      ['車選びで重視すること', d.q6, true],
-      ['ご購入予定時期', d.q7],
-      ['購入時期 その他', d.q7_other],
-      ['ご購入予算', d.q8],
-      ['お支払い方法', d.q9],
-      ['毎月のご希望額', d.q9_amt],
-      ['査定のご希望', d.q10],
-      ['ご希望査定額', d.q10_amt],
-      ['保険会社名', d.q11_co],
-      ['保険相談', d.q11_sel]
-    ])}
-    ${section('現在お乗りのお車', [
-      ['車名', d.q12_car], ['年式', d.q12_yr], ['走行距離', d.q12_km],
-      ['次回車検', shaken], ['ご購入先', d.q12_buy], ['メンテナンス店', d.q12_shop]
-    ])}
+
+    <div class="a4-cust">
+      <div class="a4-cust-hd">お客様情報</div>
+      <div class="a4-cust-grid">
+        <div class="a4-crow"><span class="a4-cl">フリガナ</span><span class="a4-cv">${html(d.cf||'')}</span></div>
+        <div class="a4-crow"><span class="a4-cl">携帯電話</span><span class="a4-cv">${html(d.ct1||'')}</span></div>
+        <div class="a4-crow"><span class="a4-cl">生年月日</span><span class="a4-cv">${html(d.cb_y&&d.cb_m&&d.cb_d ? `${d.cb_y}年${d.cb_m}月${d.cb_d}日` : (d.cb_y||''))}</span></div>
+        <div class="a4-crow"><span class="a4-cl">お名前</span><span class="a4-cv" style="font-size:12px;font-weight:900;">${html(d.cn||'')}&nbsp;様</span></div>
+        <div class="a4-crow"><span class="a4-cl">ご自宅電話</span><span class="a4-cv">${html(d.ct2||'')}</span></div>
+        <div class="a4-crow"><span class="a4-cl">ご家族人数</span><span class="a4-cv">${html(d.cfam||'')}</span></div>
+        <div class="a4-crow" style="grid-column:1/-1"><span class="a4-cl">ご住所</span><span class="a4-cv">${html(d.cz?'〒'+d.cz+'　':'')}${html(d.ca||'')}</span></div>
+        <div class="a4-crow"><span class="a4-cl">メール</span><span class="a4-cv">${html(d.ce||'')}</span></div>
+        <div class="a4-crow"><span class="a4-cl">ご職業</span><span class="a4-cv">${html(d.cj||'')}</span></div>
+      </div>
+    </div>
+
+    <div class="a4-qgrid">
+      ${qbox(1,'ご来店のきっかけ', ans(d.q1))}
+      ${qbox(2,'Honda Cars を知ったきっかけ', ans(d.q2)+(d.q2o?`<br><span style="font-size:8.5px;color:#555;">その他：${html(d.q2o)}</span>`:''))}
+      ${qbox(3,'本日のご来店目的', ans(d.q3)+(d.q3o?`<br><span style="font-size:8.5px;color:#555;">その他：${html(d.q3o)}</span>`:''))}
+      ${qbox(4,'興味のある車種', ans(d.q4)+q4ev, true)}
+      ${qbox(5,'他メーカー希望車種',
+        q5list.length
+          ? q5list.map(v=>`<span class="a4-ans">${html(v)}</span>`).join('、') + (d.q5_note?`<br><span style="font-size:8.5px;color:#555;">備考：${html(d.q5_note)}</span>`:'')
+          : '<span class="a4-none">—</span>'
+      )}
+      ${qbox(6,'車選びで重視すること', ans(d.q6))}
+      ${qbox(7,'ご購入予定時期',
+        ans(d.q7) + (d.q7_other?`<br><span style="font-size:8.5px;color:#555;">${html(d.q7_other)}</span>`:'')
+      )}
+      ${qbox(8,'ご購入予算', ans(d.q8))}
+      ${qbox(9,'お支払い方法', ans(d.q9)+(d.q9_amt?`<br><span style="font-size:8.5px;color:#555;">毎月のご希望：${html(d.q9_amt)}</span>`:''))}
+      ${qbox(10,'査定のご希望', ans(d.q10)+(d.q10_amt?`<br><span style="font-size:8.5px;color:#555;">ご希望査定額：${html(d.q10_amt)}</span>`:''))}
+      ${qbox(11,'自動車保険',
+        (d.q11_co?`<span class="a4-ans">${html(d.q11_co)}</span><br>`:'')+
+        (d.q11_sel?`<span class="a4-ans">${html(d.q11_sel)}</span>`:'<span class="a4-none">—</span>')
+      )}
+      ${qbox(12,'現在お乗りのお車',
+        carRows.length
+          ? `<div class="a4-carinfo">${carRows.map(([l,v])=>`<span><span class="cl">${html(l)}：</span><span class="a4-ans">${html(v)}</span></span>`).join('')}</div>`
+          : '<span class="a4-none">—</span>',
+        true
+      )}
+    </div>
+
+    <div class="a4-staff">
+      <div class="a4-staff-hd">スタッフ記入欄（お客様はご記入不要です）</div>
+      <div class="a4-staff-grid">
+        <div class="a4-srow"><span>担当者：</span><input class="a4-si"></div>
+        <div class="a4-srow"><span>来店時間：</span><input class="a4-si"></div>
+        <div class="a4-srow"><span>商談結果：</span><input class="a4-si"></div>
+        <div class="a4-srow"><span>次回アポ：</span><input class="a4-si"></div>
+        <div class="a4-srow full"><span>備考・特記：</span><input class="a4-si"></div>
+      </div>
+    </div>
+
+    <div class="a4-priv">
+      <span class="a4-priv-lbl">個人情報の取り扱い</span>
+      <p class="a4-priv-txt">弊社は、お客様の個人情報を、当社が営む自動車販売業等に関する商品及びこれらに付帯・関連する業務の提供の範囲で取得・利用するほか、業務委託先などに提供を行うことがあります。これらの個人情報の取り扱いについてご同意のうえ、担当スタッフへご提出ください。詳細につきましては当社スタッフまでお問い合わせください。</p>
+    </div>
   `;
   document.getElementById('preview').classList.add('show');
 }
