@@ -134,7 +134,7 @@ canvas { display: none; }
 
   <div class="panel input-panel">
     <div class="title">文字列から読み込む</div>
-    <textarea id="payloadText" class="paste" placeholder="HCNQ2: から始まるQR文字列を貼り付け"></textarea>
+    <textarea id="payloadText" class="paste" placeholder="HCNQ3: から始まるQR文字列を貼り付け"></textarea>
     <div class="actions">
       <button class="btn" type="button" onclick="loadFromText()">読み込む</button>
     </div>
@@ -166,6 +166,25 @@ const DEFAULT_D = {
 };
 const TRANSFER_SECRET = 'HondaCars-NaraChuo-MinamiKyoto-Questionnaire-QR-2026';
 const TRANSFER_SALT = 'HondaCarsQuestionnaireQRv2';
+const TRANSFER_FIELDS = [
+  '_date','cf','cn','cb_y','cb_m','cb_d','ct1','ct2','ce','cz','ca','cj','cfam',
+  'q2o','q3o','q5_1','q5_2','q5_3','q5_4','q5_note','q7_other','q9_amt','q10_amt','q11_co',
+  'q12_car','q12_yr','q12_km','q12_sh_y','q12_sh_m','q12_buy','q12_shop'
+];
+const TRANSFER_OPTION_KEYS = ['q1','q2','q3','q4','q4ev_charge','q6','q7','q8','q9','q10','q11_sel'];
+const TRANSFER_OPTIONS = {
+  q1:['車検が近い','お乗り換えを検討している','初めて車を購入する','家族構成が変わった','安全性能が気になる','燃費を良くしたい','故障・修理が増えた','その他'],
+  q2:['折込チラシ','通りがかり','ホームページ','Google検索','SNS','ご紹介','以前ご利用いただいた','近くに来たついで'],
+  q3:['新車を見たい','中古車を見たい','試乗したい','見積りが欲しい','査定してほしい','車の情報収集','保険の相談'],
+  q4:['FIT（ガソリン/ハイブリッド）','VEZEL（ハイブリッド）','ZR-V（ガソリン/ハイブリッド）','WR-V（ガソリン）','CR-V（ハイブリッド）','FREED（ガソリン/ハイブリッド）','STEP WGN（ガソリン/ハイブリッド）','ODYSSEY（ハイブリッド）','N-BOX / N-BOX JOY（ガソリン）','N-WGN（ガソリン）','N-ONE（ガソリン）','ACCORD（ハイブリッド）','CIVIC（ガソリン/ハイブリッド）','CIVIC TYPE R（ガソリン）','PRELUDE（ハイブリッド）','N-VAN e:','N-ONE e:','INSIGHT','Super-ONE','商用車 N-VAN','福祉車両 N-BOX（福祉）','中古車','その他'],
+  q4ev_charge:['ある','ない','検討中'],
+  q6:['デザイン','燃費','安全性能','室内の広さ','荷室の広さ','運転のしやすさ','維持費','月々のお支払い','購入価格','リセールバリュー','納期','その他'],
+  q7:['本日、ご契約まで検討している','1ヶ月以内','条件が合えば早めに決めたい','3ヶ月以内','まずは比較・検討したい','6ヶ月以内','1年以内','まだ決めていない','その他'],
+  q8:['～200万円','～250万円','～300万円','～350万円','～400万円','～450万円','～500万円','～600万円','600万円以上'],
+  q9:['現金','均等払いクレジット','残価設定クレジット','リース・サブスク（楽まる）','説明を聞いて比較したい'],
+  q10:['査定してほしい','金額だけ知りたい','今回は希望しない'],
+  q11_sel:['保険内容も相談したい','今回は相談しない']
+};
 
 function setStatus(msg, isErr){
   const el = document.getElementById('status');
@@ -228,8 +247,46 @@ function parseAnswerObject(obj){
   return Object.assign({}, DEFAULT_D, obj.data);
 }
 
+function expandCompactTransfer(compact){
+  if(!Array.isArray(compact) || !Array.isArray(compact[0]) || !Array.isArray(compact[1])) {
+    throw new Error('短縮QRデータとして読み込めません。');
+  }
+  const out = Object.assign({}, DEFAULT_D);
+  compact[0].forEach(([idx, val]) => {
+    const key = TRANSFER_FIELDS[idx];
+    if(key) out[key] = val;
+  });
+  compact[1].forEach(([idx, val]) => {
+    const key = TRANSFER_OPTION_KEYS[idx];
+    if(!key) return;
+    const choices = TRANSFER_OPTIONS[key];
+    if(Array.isArray(val)){
+      out[key] = val.map(item => typeof item === 'number' ? choices[item] : item).filter(Boolean);
+    } else {
+      out[key] = typeof val === 'number' ? (choices[val] || '') : val;
+    }
+  });
+  return out;
+}
+
 async function decodeTransferData(raw){
   const text = String(raw || '').trim();
+  if(text.startsWith('HCNQ3:')){
+    const envelope = bytesFromBase64Url(text.slice(6));
+    if(envelope.length < 30) throw new Error('暗号化QRデータとして読み込めません。');
+    const alg = envelope[0] === 1 ? 'gzip' : 'none';
+    const iv = envelope.slice(1, 13);
+    const encrypted = envelope.slice(13);
+    const key = await getTransferKey();
+    const plainPacked = new Uint8Array(await crypto.subtle.decrypt(
+      { name:'AES-GCM', iv },
+      key,
+      encrypted
+    ));
+    const plain = await gunzipBytes(plainPacked, alg);
+    return expandCompactTransfer(JSON.parse(new TextDecoder().decode(plain)));
+  }
+
   if(text.startsWith('HCNQ2:')){
     const envelope = JSON.parse(new TextDecoder().decode(bytesFromBase64Url(text.slice(6))));
     if(!envelope || envelope.v !== 2 || !envelope.i || !envelope.d) {
