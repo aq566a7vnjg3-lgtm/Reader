@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>アンケートQR読み取り</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="QR読み取り">
+<meta name="theme-color" content="#ec6c00">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Hiragino Kaku Gothic ProN','Yu Gothic UI','Meiryo',sans-serif;
+  background: #f4f6f8;
+  color: #1a1a1a;
+  min-height: 100dvh;
+}
+.bar {
+  background: #ec6c00;
+  color: #fff;
+  padding: 14px 18px;
+  font-size: 18px;
+  font-weight: 900;
+}
+.wrap { max-width: 860px; margin: 0 auto; padding: 16px; }
+.panel {
+  background: #fff;
+  border: 1px solid #e5e8ec;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.title { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
+.lead { color: #666; line-height: 1.7; font-size: 14px; margin-bottom: 14px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.btn, .file-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #ec6c00;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+}
+.btn.secondary { background: #555; }
+.file-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.paste {
+  width: 100%;
+  min-height: 92px;
+  border: 2px solid #e5e8ec;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  resize: vertical;
+  outline: none;
+}
+.paste:focus { border-color: #ec6c00; }
+.status {
+  margin-top: 10px;
+  color: #777;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.status.err { color: #c62828; }
+.preview { display: none; }
+.preview.show { display: block; }
+.a4 {
+  background: #fff;
+  border: 1px solid #d9dde3;
+  border-radius: 8px;
+  padding: 16px;
+}
+.a4h {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 3px solid #ec6c00;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.a4h-title { color: #ec6c00; font-size: 24px; font-weight: 900; letter-spacing: 2px; }
+.date { color: #666; font-size: 13px; white-space: nowrap; }
+.section { border: 1px solid #ec6c00; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
+.section-hd { background: #ec6c00; color: #fff; padding: 7px 10px; font-size: 14px; font-weight: 900; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; padding: 10px; }
+.item { display: flex; gap: 8px; min-width: 0; font-size: 14px; line-height: 1.5; }
+.lbl { color: #777; white-space: nowrap; flex-shrink: 0; }
+.val { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.wide { grid-column: 1 / -1; }
+.empty { color: #aaa; font-weight: 400; }
+.actions { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+canvas { display: none; }
+@media (max-width: 620px) {
+  .grid { grid-template-columns: 1fr; }
+  .a4h { flex-direction: column; }
+}
+@media print {
+  body { background: #fff; }
+  .bar, .input-panel, .actions { display: none !important; }
+  .wrap { max-width: none; padding: 0; }
+  .panel { border: none; margin: 0; padding: 0; }
+  .a4 { border: none; border-radius: 0; padding: 0; }
+  .section-hd { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<div class="bar">アンケートQR読み取り</div>
+<div class="wrap">
+  <div class="panel input-panel">
+    <div class="title">QRコードを読み取る</div>
+    <p class="lead">お客様スマホに表示されたQRコードを撮影、または保存画像から選択してください。読み取れない場合は、QR文字列を貼り付けても復元できます。</p>
+    <div class="row">
+      <label class="file-label" for="qrImage">QR画像を撮影/選択</label>
+      <input id="qrImage" class="file-input" type="file" accept="image/*" capture="environment">
+      <button class="btn secondary" type="button" onclick="resetAll()">クリア</button>
+    </div>
+    <div class="status" id="status">未読み取りです。</div>
+  </div>
+
+  <div class="panel input-panel">
+    <div class="title">文字列から読み込む</div>
+    <textarea id="payloadText" class="paste" placeholder="HCNQ2: から始まるQR文字列を貼り付け"></textarea>
+    <div class="actions">
+      <button class="btn" type="button" onclick="loadFromText()">読み込む</button>
+    </div>
+  </div>
+
+  <div class="panel preview" id="preview">
+    <div class="a4" id="a4"></div>
+    <div class="actions">
+      <button class="btn" type="button" onclick="window.print()">印刷する</button>
+    </div>
+  </div>
+</div>
+<canvas id="canvas"></canvas>
+<script src="jsQR.min.js"></script>
+<script src="pako.min.js"></script>
+<script>
+const DEFAULT_D = {
+  q1:'', q2:[], q2o:'', q3:[], q3o:'',
+  q4:[], q4ev_charge:'',
+  q5_1:'', q5_2:'', q5_3:'', q5_4:'', q5_note:'',
+  q6:[],
+  q7:'', q7b:[], q7_other:'',
+  q8:'',
+  q9:[], q9_amt:'',
+  q10:'', q10_amt:'',
+  q11_co:'', q11_sel:'',
+  q12_car:'', q12_yr:'', q12_km:'', q12_sh_y:'', q12_sh_m:'', q12_buy:'', q12_shop:'',
+  cf:'', cn:'', cb_y:'', cb_m:'', cb_d:'', ct1:'', ct2:'', ce:'', cz:'', ca:'', cj:'', cfam:'', _date:''
+};
+const TRANSFER_SECRET = 'HondaCars-NaraChuo-MinamiKyoto-Questionnaire-QR-2026';
+const TRANSFER_SALT = 'HondaCarsQuestionnaireQRv2';
+
+function setStatus(msg, isErr){
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.classList.toggle('err', !!isErr);
+}
+
+function html(v){
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+
+function val(v){
+  if(Array.isArray(v)) return v.length ? html(v.join('、')) : '<span class="empty">未入力</span>';
+  return v ? html(v) : '<span class="empty">未入力</span>';
+}
+
+function bytesFromBase64Url(value){
+  let b64 = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
+  while(b64.length % 4) b64 += '=';
+  const bin = atob(b64);
+  return Uint8Array.from(bin, c => c.charCodeAt(0));
+}
+
+async function gunzipBytes(bytes, alg){
+  if(alg === 'none') return bytes;
+  if(alg !== 'gzip') throw new Error('対応していない圧縮形式です。');
+  if(window.pako) return pako.ungzip(bytes);
+  if(!window.DecompressionStream) throw new Error('このブラウザは圧縮データの展開に対応していません。iPadOSを更新するか、別端末でお試しください。');
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function getTransferKey(){
+  if(!window.crypto || !crypto.subtle) {
+    throw new Error('このブラウザは暗号化データの復号に対応していません。');
+  }
+  const enc = new TextEncoder();
+  const material = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(TRANSFER_SECRET),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:enc.encode(TRANSFER_SALT), iterations:100000, hash:'SHA-256' },
+    material,
+    { name:'AES-GCM', length:256 },
+    false,
+    ['decrypt']
+  );
+}
+
+function parseAnswerObject(obj){
+  if(!obj || obj.app !== 'honda-questionnaire' || !obj.data) {
+    throw new Error('アンケートデータとして読み込めません。');
+  }
+  return Object.assign({}, DEFAULT_D, obj.data);
+}
+
+async function decodeTransferData(raw){
+  const text = String(raw || '').trim();
+  if(text.startsWith('HCNQ2:')){
+    const envelope = JSON.parse(new TextDecoder().decode(bytesFromBase64Url(text.slice(6))));
+    if(!envelope || envelope.v !== 2 || !envelope.i || !envelope.d) {
+      throw new Error('暗号化QRデータとして読み込めません。');
+    }
+    const key = await getTransferKey();
+    const plainPacked = new Uint8Array(await crypto.subtle.decrypt(
+      { name:'AES-GCM', iv:bytesFromBase64Url(envelope.i) },
+      key,
+      bytesFromBase64Url(envelope.d)
+    ));
+    const plain = await gunzipBytes(plainPacked, envelope.c);
+    const obj = JSON.parse(new TextDecoder().decode(plain));
+    return parseAnswerObject(obj);
+  }
+
+  if(text.startsWith('HCNQ1:')){
+    const obj = JSON.parse(new TextDecoder().decode(bytesFromBase64Url(text.slice(6))));
+    return parseAnswerObject(obj);
+  }
+
+  throw new Error('対応していないQRデータです。');
+}
+
+function renderAnswer(d){
+  const birth = d.cb_y && d.cb_m && d.cb_d ? `${d.cb_y}年${d.cb_m}月${d.cb_d}日` : d.cb_y;
+  const shaken = d.q12_sh_y ? `${d.q12_sh_y}${d.q12_sh_m ? ' ' + d.q12_sh_m + '月' : ''}` : (d.q12_sh_m ? d.q12_sh_m + '月' : '');
+  const q5 = [d.q5_1,d.q5_2,d.q5_3,d.q5_4].filter(Boolean).join('、');
+  document.getElementById('a4').innerHTML = `
+    <div class="a4h">
+      <div>
+        <div class="a4h-title">ご来店アンケート</div>
+        <div>QR読み取りデータ</div>
+      </div>
+      <div class="date">${html(d._date || '')}</div>
+    </div>
+    ${section('お客様情報', [
+      ['フリガナ', d.cf], ['お名前', d.cn], ['携帯電話', d.ct1], ['ご自宅電話', d.ct2],
+      ['生年月日', birth], ['メール', d.ce], ['郵便番号', d.cz], ['ご住所', d.ca, true],
+      ['ご職業', d.cj], ['ご家族人数', d.cfam]
+    ])}
+    ${section('アンケート回答', [
+      ['ご来店のきっかけ', d.q1],
+      ['Honda Carsを知ったきっかけ', d.q2],
+      ['きっかけ その他', d.q2o],
+      ['本日のご来店目的', d.q3],
+      ['目的 その他', d.q3o],
+      ['興味のある車種', d.q4, true],
+      ['充電設備', d.q4ev_charge],
+      ['他メーカー希望車種', q5, true],
+      ['他メーカー 備考', d.q5_note, true],
+      ['車選びで重視すること', d.q6, true],
+      ['ご購入予定時期', d.q7],
+      ['購入時期 その他', d.q7_other],
+      ['ご購入予算', d.q8],
+      ['お支払い方法', d.q9],
+      ['毎月のご希望額', d.q9_amt],
+      ['査定のご希望', d.q10],
+      ['ご希望査定額', d.q10_amt],
+      ['保険会社名', d.q11_co],
+      ['保険相談', d.q11_sel]
+    ])}
+    ${section('現在お乗りのお車', [
+      ['車名', d.q12_car], ['年式', d.q12_yr], ['走行距離', d.q12_km],
+      ['次回車検', shaken], ['ご購入先', d.q12_buy], ['メンテナンス店', d.q12_shop]
+    ])}
+  `;
+  document.getElementById('preview').classList.add('show');
+}
+
+function section(title, rows){
+  return `<div class="section"><div class="section-hd">${html(title)}</div><div class="grid">` +
+    rows.map(([label, value, wide]) =>
+      `<div class="item${wide ? ' wide' : ''}"><span class="lbl">${html(label)}</span><span class="val">${val(value)}</span></div>`
+    ).join('') +
+    `</div></div>`;
+}
+
+async function applyPayload(raw){
+  setStatus('暗号化データを復号・展開しています...', false);
+  const d = await decodeTransferData(raw);
+  renderAnswer(d);
+  document.getElementById('payloadText').value = String(raw || '').trim();
+  setStatus('読み取りました。下部に回答内容を表示しています。', false);
+}
+
+async function loadFromText(){
+  try {
+    await applyPayload(document.getElementById('payloadText').value);
+  } catch(err) {
+    setStatus(err.message || '読み込みに失敗しました。', true);
+  }
+}
+
+function resetAll(){
+  document.getElementById('payloadText').value = '';
+  document.getElementById('preview').classList.remove('show');
+  document.getElementById('a4').innerHTML = '';
+  setStatus('未読み取りです。', false);
+}
+
+document.getElementById('qrImage').addEventListener('change', event => {
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+  const img = new Image();
+  img.onload = async () => {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently:true });
+    const max = 1600;
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height);
+    URL.revokeObjectURL(img.src);
+    if(!code) {
+      setStatus('QRコードを読み取れませんでした。明るい場所でQR全体が入るように撮影してください。', true);
+      return;
+    }
+    try {
+      await applyPayload(code.data);
+    } catch(err) {
+      setStatus(err.message || '読み込みに失敗しました。', true);
+    }
+  };
+  img.onerror = () => setStatus('画像を開けませんでした。', true);
+  img.src = URL.createObjectURL(file);
+});
+</script>
+</body>
+</html>
