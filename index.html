@@ -76,6 +76,29 @@ body {
   line-height: 1.6;
 }
 .status.err { color: #c62828; }
+.scanner {
+  display: none;
+  margin-top: 14px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #111;
+  position: relative;
+}
+.scanner.show { display: block; }
+.scanner video {
+  display: block;
+  width: 100%;
+  max-height: 58vh;
+  object-fit: cover;
+}
+.scan-mark {
+  position: absolute;
+  inset: 12%;
+  border: 3px solid rgba(236,108,0,0.92);
+  border-radius: 10px;
+  pointer-events: none;
+  box-shadow: 0 0 0 999px rgba(0,0,0,0.22);
+}
 .preview { display: none; }
 .preview.show { display: block; }
 .a4 {
@@ -125,9 +148,15 @@ canvas { display: none; }
     <div class="title">QRコードを読み取る</div>
     <p class="lead">お客様スマホに表示されたQRコードを撮影、または保存画像から選択してください。読み取れない場合は、QR文字列を貼り付けても復元できます。</p>
     <div class="row">
+      <button class="btn" type="button" id="btnLive" onclick="startLiveScan()">ライブ読み取り開始</button>
+      <button class="btn secondary" type="button" id="btnStopLive" onclick="stopLiveScan()" style="display:none;">停止</button>
       <label class="file-label" for="qrImage">QR画像を撮影/選択</label>
       <input id="qrImage" class="file-input" type="file" accept="image/*" capture="environment">
       <button class="btn secondary" type="button" onclick="resetAll()">クリア</button>
+    </div>
+    <div class="scanner" id="scanner">
+      <video id="scannerVideo" playsinline muted></video>
+      <div class="scan-mark"></div>
     </div>
     <div class="status" id="status">未読み取りです。</div>
   </div>
@@ -167,9 +196,9 @@ const DEFAULT_D = {
 const TRANSFER_SECRET = 'HondaCars-NaraChuo-MinamiKyoto-Questionnaire-QR-2026';
 const TRANSFER_SALT = 'HondaCarsQuestionnaireQRv2';
 const TRANSFER_FIELDS = [
-  '_date','cf','cn','cb_y','cb_m','cb_d','ct1','ct2','ce','cz','ca','cj','cfam',
-  'q2o','q3o','q5_1','q5_2','q5_3','q5_4','q5_note','q7_other','q9_amt','q10_amt','q11_co',
-  'q12_car','q12_yr','q12_km','q12_sh_y','q12_sh_m','q12_buy','q12_shop'
+  '_date','cf','cn','cb_y','cb_m','cb_d','ct1','ct2','ce','cfam',
+  'q5_1','q5_2','q7_other','q9_amt','q10_amt','q11_co',
+  'q12_car','q12_yr','q12_km'
 ];
 const TRANSFER_OPTION_KEYS = ['q1','q2','q3','q4','q4ev_charge','q6','q7','q8','q9','q10','q11_sel'];
 const TRANSFER_OPTIONS = {
@@ -185,11 +214,20 @@ const TRANSFER_OPTIONS = {
   q10:['査定してほしい','金額だけ知りたい','今回は希望しない'],
   q11_sel:['保険内容も相談したい','今回は相談しない']
 };
+let liveStream = null;
+let liveScanTimer = null;
+let liveScanBusy = false;
 
 function setStatus(msg, isErr){
   const el = document.getElementById('status');
   el.textContent = msg;
   el.classList.toggle('err', !!isErr);
+}
+
+function setLiveUi(isLive){
+  document.getElementById('scanner').classList.toggle('show', isLive);
+  document.getElementById('btnLive').style.display = isLive ? 'none' : '';
+  document.getElementById('btnStopLive').style.display = isLive ? '' : 'none';
 }
 
 function html(v){
@@ -373,6 +411,75 @@ async function applyPayload(raw){
   setStatus('読み取りました。下部に回答内容を表示しています。', false);
 }
 
+async function startLiveScan(){
+  if(liveStream) return;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setStatus('この表示方法ではカメラを起動できません。GitHub PagesなどのHTTPSで開くか、QR画像を撮影/選択してください。', true);
+    return;
+  }
+  try {
+    const video = document.getElementById('scannerVideo');
+    liveStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal:'environment' },
+        width: { ideal:1280 },
+        height: { ideal:720 }
+      },
+      audio: false
+    });
+    video.srcObject = liveStream;
+    video.setAttribute('playsinline', 'true');
+    await video.play();
+    setLiveUi(true);
+    setStatus('カメラをQRコードに向けてください。読み取ると自動で停止します。', false);
+    liveScanTimer = requestAnimationFrame(scanLiveFrame);
+  } catch(err) {
+    stopLiveScan();
+    setStatus('カメラを起動できませんでした。ブラウザのカメラ許可、またはHTTPSで開いているか確認してください。', true);
+  }
+}
+
+function stopLiveScan(){
+  if(liveScanTimer) cancelAnimationFrame(liveScanTimer);
+  liveScanTimer = null;
+  liveScanBusy = false;
+  if(liveStream){
+    liveStream.getTracks().forEach(track => track.stop());
+    liveStream = null;
+  }
+  const video = document.getElementById('scannerVideo');
+  if(video) video.srcObject = null;
+  setLiveUi(false);
+}
+
+async function scanLiveFrame(){
+  if(!liveStream) return;
+  const video = document.getElementById('scannerVideo');
+  if(video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && !liveScanBusy){
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently:true });
+    const max = 900;
+    const scale = Math.min(1, max / Math.max(video.videoWidth || 1, video.videoHeight || 1));
+    canvas.width = Math.max(1, Math.round((video.videoWidth || 1) * scale));
+    canvas.height = Math.max(1, Math.round((video.videoHeight || 1) * scale));
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts:'dontInvert' });
+    if(code){
+      liveScanBusy = true;
+      try {
+        await applyPayload(code.data);
+        stopLiveScan();
+        return;
+      } catch(err) {
+        liveScanBusy = false;
+        setStatus(err.message || '読み込みに失敗しました。', true);
+      }
+    }
+  }
+  liveScanTimer = requestAnimationFrame(scanLiveFrame);
+}
+
 async function loadFromText(){
   try {
     await applyPayload(document.getElementById('payloadText').value);
@@ -382,6 +489,7 @@ async function loadFromText(){
 }
 
 function resetAll(){
+  stopLiveScan();
   document.getElementById('payloadText').value = '';
   document.getElementById('preview').classList.remove('show');
   document.getElementById('a4').innerHTML = '';
@@ -389,6 +497,7 @@ function resetAll(){
 }
 
 document.getElementById('qrImage').addEventListener('change', event => {
+  stopLiveScan();
   const file = event.target.files && event.target.files[0];
   if(!file) return;
   const img = new Image();
